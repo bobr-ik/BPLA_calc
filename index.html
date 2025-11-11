@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>UAV QuickCalc — Калькулятор БПЛА самолётного типа</title>
+        <link rel="stylesheet" href="styles.css">
+    </head>
+    <body>
+        <header class="topbar">
+            <div class="brand">
+                <div class="logo-badge" aria-hidden>
+                    <svg width="120" height="28" viewBox="0 0 100 24"
+                        aria-hidden="true">
+                        <rect width="100" height="24" rx="4"
+                            fill="var(--glass2)" opacity="0.18"></rect>
+                        <text x="8" y="16" font-weight="700"
+                            font-family="Inter, Roboto, Arial" font-size="10"
+                            fill="var(--page-text)">UAV</text>
+                        <text x="30" y="16" font-weight="600"
+                            font-family="Inter, Roboto, Arial" font-size="10"
+                            fill="var(--muted)">QuickCalc</text>
+                    </svg>
+                </div>
+                <div>
+                    <div class="title">UAV QuickCalc</div>
+                    <div class="subtitle">Калькулятор БПЛА самолётного
+                        типа</div>
+                </div>
+            </div>
+
+            <nav class="nav">
+                <button id="themeToggle" class="theme-toggle"
+                    aria-label="Toggle theme" aria-pressed="false">🌗</button>
+            </nav>
+        </header>
+
+        <main class="container">
+            <section class="hero">
+                <h1>Расчёт характеристик БПЛА самолётного типа</h1>
+                <p class="lead">На основе требуемой дальности, времени полёта и
+                    полезной нагрузки рассчитываются оптимальные параметры
+                    БПЛА</p>
+            </section>
+
+            <section class="input-section">
+                <form id="calcForm">
+                    <div class="input-grid">
+                        <div class="input-card">
+                            <label for="range">Дальность полёта (km)</label>
+                            <input type="number" id="range" min="1" step="1"
+                                value="50" required>
+                        </div>
+
+                        <div class="input-card">
+                            <label for="endurance">Время полёта (мин)</label>
+                            <input type="number" id="endurance" min="1" step="1"
+                                value="45" required>
+                        </div>
+
+                        <div class="input-card">
+                            <label for="payload">Полезная нагрузка (kg)</label>
+                            <input type="number" id="payload" min="0" step="0.1"
+                                value="0.5" required>
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button type="submit" class="btn primary">Рассчитать
+                            параметры БПЛА</button>
+                        <button type="button" id="exportBtn" class="btn">Скачать
+                            отчёт (JSON)</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="results-section" aria-live="polite">
+                <h3>Рассчитанные параметры БПЛА</h3>
+                <div class="results-grid">
+                    <div class="result-card">
+                        <span class="result-label">Взлётная масса</span>
+                        <div class="result-value" id="mtow">—<span
+                                class="result-unit">kg</span></div>
+                    </div>
+
+                    <div class="result-card">
+                        <span class="result-label">Ёмкость аккумулятора</span>
+                        <div class="result-value" id="batteryWh">—<span
+                                class="result-unit">Wh</span></div>
+                    </div>
+
+                    <div class="result-card">
+                        <span class="result-label">Масса батареи</span>
+                        <div class="result-value" id="batteryMass">—<span
+                                class="result-unit">kg</span></div>
+                    </div>
+
+                    <div class="result-card">
+                        <span class="result-label">Крейсерская скорость</span>
+                        <div class="result-value" id="speed">—<span
+                                class="result-unit">m/s</span></div>
+                    </div>
+
+                    <div class="result-card">
+                        <span class="result-label">Требуемая мощность</span>
+                        <div class="result-value" id="power">—<span
+                                class="result-unit">W</span></div>
+                    </div>
+
+                    <div class="result-card">
+                        <span class="result-label">Масса конструкции</span>
+                        <div class="result-value" id="structureMass">—<span
+                                class="result-unit">kg</span></div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-title">Сравнение характеристик</div>
+                    <div class="progress-bars" id="progressBars">
+                        <div class="progress-item">
+                            <span class="progress-label">Мощность</span>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" id="powerBar"
+                                    style="width:0%;background:linear-gradient(90deg, var(--accent1), var(--accent2))"></div>
+                            </div>
+                            <span class="progress-value" id="powerValue">0
+                                W</span>
+                        </div>
+                        <div class="progress-item">
+                            <span class="progress-label">Батарея</span>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" id="batteryBar"
+                                    style="width:0%;background:linear-gradient(90deg, #10b981, #34d399)"></div>
+                            </div>
+                            <span class="progress-value" id="batteryValue">0
+                                Wh</span>
+                        </div>
+                        <div class="progress-item">
+                            <span class="progress-label">Масса</span>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" id="massBar"
+                                    style="width:0%;background:linear-gradient(90deg, #8b5cf6, #a78bfa)"></div>
+                            </div>
+                            <span class="progress-value" id="massValue">0
+                                kg</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="readme">
+                <h2>Алгоритм расчёта</h2>
+                <ol>
+                    <li>На основе времени полёта и дальности рассчитывается
+                        крейсерская скорость</li>
+                    <li>Оценивается взлётная масса с учётом полезной нагрузки и
+                        коэффициентов конструкции</li>
+                    <li>Рассчитывается требуемая мощность для полёта</li>
+                    <li>Определяется необходимая ёмкость аккумулятора и его
+                        масса</li>
+                    <li>Вычисляется масса конструкции БПЛА</li>
+                </ol>
+                <p class="tiny">Замечание: это учебный прототип. Результаты
+                    близки к грубой инженерной оценке, но не заменяют
+                    специализированных инструментов.</p>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-links">
+                    <a href="#" class="footer-link">О проекте</a>
+                    <a class="footer-link"
+                        href="https://docs.google.com/document/d/1EsYmTQMiNuOpXQC7tfC71-Q34lLc7tfWbhAm_BJH2Hg/edit?tab=t.0#heading=h.k46wdbu3o0h">Документация</a>
+                    <a href="#" class="footer-link">Контакты</a>
+                    <a href="#" class="footer-link">GitHub</a>
+                </div>
+                <div class="footer-copyright">
+                    <small>UAV QuickCalc — учебный прототип · Бесплатно ·
+                        HTML/CSS/JS · 2024</small>
+                </div>
+            </div>
+        </footer>
+
+        <script src="script.js"></script>
+    </body>
+</html>
