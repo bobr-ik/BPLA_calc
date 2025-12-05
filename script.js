@@ -19,116 +19,109 @@
     function numeric(x) { return Number(x) || 0 }
 
     function calculateUAVParameters(rangeKm, enduranceMin, payloadKg) {
-    // 1. Исходные требования
-    const enduranceHours = enduranceMin / 60;
-    
-    // 2. Расчёт крейсерской скорости из требуемой дальности и времени
-    const speedMs = (rangeKm * 1000) / (enduranceHours * 3600);
-    
-    // 3. Константы и коэффициенты
-    const AIR_DENSITY = 1.225; // кг/м³
-    const GRAVITY = 9.81; // м/с²
-    const BATTERY_ENERGY_DENSITY = 250; // Wh/kg
-    const MOTOR_EFFICIENCY = 0.85; // КПД двигателя
-    const PROP_EFFICIENCY = 0.75; // КПД винта
-    const TOTAL_PROP_EFFICIENCY = MOTOR_EFFICIENCY * PROP_EFFICIENCY;
-    
-    // Аэродинамические параметры
-    const WING_ASPECT_RATIO = 8;
-    const WING_EFFICIENCY_FACTOR = 0.85;
-    const CRUISE_CL = 0.5;
-    const CD0 = 0.03;
-    
-    // 4. Оценка взлётной массы методом итераций
-    let mtow = payloadKg * 4; // Начальная оценка
-    
-    for (let iteration = 0; iteration < 5; iteration++) {
-        // Вес аппарата
+        // 1. Исходные требования
+        const enduranceHours = enduranceMin / 60;
+        
+        // 2. Расчёт крейсерской скорости
+        const speedMs = (rangeKm * 1000) / (enduranceHours * 3600);
+        const speedKmh = speedMs * 3.6;
+        
+        // 3. Реалистичные константы и коэффициенты
+        const AIR_DENSITY = 1.225; // кг/м³
+        const GRAVITY = 9.81; // м/с²
+        const BATTERY_ENERGY_DENSITY = 200; // Wh/kg (реалистично для LiPo)
+        const MOTOR_EFFICIENCY = 0.80; // Реалистичный КПД
+        const PROP_EFFICIENCY = 0.65; // Реалистичный КПД винта
+        
+        // Аэродинамические параметры для малого БПЛА
+        const WING_ASPECT_RATIO = 6; // Удлинение крыла
+        const WING_EFFICIENCY_FACTOR = 0.80;
+        const CRUISE_CL = 0.6; // Более реалистичный CL
+        const CD0 = 0.035; // Паразитное сопротивление
+        
+        // 4. Начальная оценка (более реалистичная)
+        let mtow = Math.max(payloadKg * 6, 2.5); // Минимум 2.5 кг для БПЛА такого класса
+        
+        // 5. Итерационный расчёт
+        for (let iteration = 0; iteration < 10; iteration++) {
+            const weight = mtow * GRAVITY;
+            
+            // Площадь крыла
+            const wingArea = (2 * weight) / (AIR_DENSITY * speedMs * speedMs * CRUISE_CL);
+            
+            // Размах крыла
+            const wingspan = Math.sqrt(WING_ASPECT_RATIO * wingArea);
+            
+            // Индуктивное сопротивление
+            const inducedDragCoeff = (CRUISE_CL * CRUISE_CL) / 
+                (Math.PI * WING_ASPECT_RATIO * WING_EFFICIENCY_FACTOR);
+            const totalCD = CD0 + inducedDragCoeff;
+            
+            // Сила сопротивления
+            const dragForce = totalCD * 0.5 * AIR_DENSITY * speedMs * speedMs * wingArea;
+            
+            // Мощность
+            const propPower = (dragForce * speedMs) / PROP_EFFICIENCY;
+            const electricPower = propPower / MOTOR_EFFICIENCY;
+            
+            // Ёмкость батареи (с запасом 25%)
+            const batteryWh = (electricPower * enduranceHours) / 0.75;
+            const batteryMass = batteryWh / BATTERY_ENERGY_DENSITY;
+            
+            // Нагрузка на крыло
+            const wingLoading = weight / wingArea;
+            
+            // Масса конструкции (более реалистичная оценка)
+            // Для малых БПЛА: структура ~30-40% от MTOW
+            const structureMass = 0.35 * mtow + 0.5; // Базовый минимум 0.5 кг
+            
+            // Системное оборудование (автопилот, телеметрия и т.д.)
+            const avionicsMass = 0.3;
+            
+            // Обновление MTOW
+            mtow = payloadKg + batteryMass + structureMass + avionicsMass;
+            
+            // Ограничение минимальной массы
+            mtow = Math.max(mtow, 2.5);
+        }
+        
+        // 6. Финальный расчёт
         const weight = mtow * GRAVITY;
-        
-        // Площадь крыла
         const wingArea = (2 * weight) / (AIR_DENSITY * speedMs * speedMs * CRUISE_CL);
-        
-        // Размах крыла
-        const wingspan = Math.sqrt(WING_ASPECT_RATIO * wingArea);
-        
-        // Индуктивное сопротивление
-        const inducedDragCoeff = (CRUISE_CL * CRUISE_CL) / 
-            (Math.PI * WING_ASPECT_RATIO * WING_EFFICIENCY_FACTOR);
-        
-        // Полный коэффициент сопротивления
-        const totalCD = CD0 + inducedDragCoeff;
-        
-        // Аэродинамическое качество
-        const liftToDragRatio = CRUISE_CL / totalCD;
-        
-        // Сила лобового сопротивления
-        const dragForce = totalCD * 0.5 * AIR_DENSITY * speedMs * speedMs * wingArea;
-        
-        // Требуемая механическая мощность на винт
-        const propPower = (dragForce * speedMs) / PROP_EFFICIENCY;
-        
-        // Электрическая мощность от батареи
-        const electricPower = propPower / MOTOR_EFFICIENCY;
-        
-        // Ёмкость батареи (с учётом 80% используемой ёмкости)
-        const batteryWh = (electricPower * enduranceHours) / 0.8;
-        
-        // Масса батареи
-        const batteryMass = batteryWh / BATTERY_ENERGY_DENSITY;
-        
-        // Нагрузка на крыло
         const wingLoading = weight / wingArea;
         
-        // Масса конструкции
-        const structureMass = 0.3 * mtow + 0.01 * wingLoading * wingArea / GRAVITY;
+        const inducedDragCoeff = (CRUISE_CL * CRUISE_CL) / 
+            (Math.PI * WING_ASPECT_RATIO * WING_EFFICIENCY_FACTOR);
+        const totalCD = CD0 + inducedDragCoeff;
+        const liftToDragRatio = CRUISE_CL / totalCD;
         
-        // Обновление взлётной массы
-        mtow = payloadKg + batteryMass + structureMass;
-    }
-    
-    // 5. Финальный расчёт
-    const weight = mtow * GRAVITY;
-    
-    // Площадь крыла
-    const wingArea = (2 * weight) / (AIR_DENSITY * speedMs * speedMs * CRUISE_CL);
-    
-    // Коэффициенты сопротивления
-    const inducedDragCoeff = (CRUISE_CL * CRUISE_CL) / 
-        (Math.PI * WING_ASPECT_RATIO * WING_EFFICIENCY_FACTOR);
-    const totalCD = CD0 + inducedDragCoeff;
-    const liftToDragRatio = CRUISE_CL / totalCD;
-    
-    // Сила сопротивления
-    const dragForce = totalCD * 0.5 * AIR_DENSITY * speedMs * speedMs * wingArea;
-    
-    // Требуемая мощность
-    const propPower = (dragForce * speedMs) / PROP_EFFICIENCY;
-    const electricPower = propPower / MOTOR_EFFICIENCY;
-    
-    // Ёмкость батареи
-    const batteryWh = (electricPower * enduranceHours) / 0.8;
-    
-    // Масса батареи
-    const batteryMass = batteryWh / BATTERY_ENERGY_DENSITY;
-    
-    // Нагрузка на крыло
-    const wingLoading = weight / wingArea;
-    
-    // Масса конструкции
-    const structureMass = 0.3 * mtow + 0.01 * wingLoading * wingArea / GRAVITY;
+        const dragForce = totalCD * 0.5 * AIR_DENSITY * speedMs * speedMs * wingArea;
+        const propPower = (dragForce * speedMs) / PROP_EFFICIENCY;
+        const electricPower = propPower / MOTOR_EFFICIENCY;
+        
+        const batteryWh = (electricPower * enduranceHours) / 0.75;
+        const batteryMass = batteryWh / BATTERY_ENERGY_DENSITY;
+        
+        const structureMass = 0.35 * mtow + 0.5;
+        const avionicsMass = 0.3;
 
-    return {
-        mtow: +(mtow).toFixed(3),
-        batteryWh: Math.ceil(batteryWh),
-        batteryMass: +(batteryMass).toFixed(2),
-        speed: +(speedMs).toFixed(1),
-        power: Math.round(electricPower),
-        structureMass: +(structureMass).toFixed(2),
-        enduranceHours: +(enduranceHours).toFixed(2),
-        rangeKm: +(rangeKm).toFixed(1)
-    };
-}
+        return {
+            mtow: +(mtow).toFixed(2),
+            batteryWh: Math.ceil(batteryWh),
+            batteryMass: +(batteryMass).toFixed(2),
+            speed: +(speedMs).toFixed(1),
+            power: Math.round(electricPower),
+            structureMass: +((structureMass + avionicsMass)).toFixed(2),
+            enduranceHours: +(enduranceHours).toFixed(2),
+            rangeKm: +(rangeKm).toFixed(1),
+            // Дополнительные реалистичные параметры
+            wingArea: +(wingArea).toFixed(2),
+            wingspan: +(Math.sqrt(WING_ASPECT_RATIO * wingArea)).toFixed(2),
+            wingLoading: +(wingLoading).toFixed(1),
+            liftToDrag: +(liftToDragRatio).toFixed(1),
+            thrustRequired: +(dragForce).toFixed(1)
+        };
+    }
 
     function updateProgressBars(powerW, batteryWh, massKg) {
         // Максимальные значения для прогресс-баров (оптимизированы для малых БПЛА)
